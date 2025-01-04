@@ -25,6 +25,6 @@ jobs:
           VM_USER: ${{ secrets.VM_USER }}
           VM_PASSWORD: ${{ secrets.VM_PASSWORD }}
         run: |
-          sshpass -p "$VM_PASSWORD" ssh -o StrictHostKeyChecking=no $VM_USER@$VM_HOST "sudo rm -rf /var/www/html/*"
-          sshpass -p "$VM_PASSWORD" scp -o StrictHostKeyChecking=no -r * $VM_USER@$VM_HOST:/var/www/html/
-          sshpass -p "$VM_PASSWORD" ssh -o StrictHostKeyChecking=no $VM_USER@$VM_HOST "sudo systemctl restart nginx"
+          sshpass -p "$VM_PASSWORD" ssh -o StrictHostKeyChecking=no $VM_USER@$VM_HOST "echo $VM_PASSWORD | sudo -S rm -rf /var/www/html/*"
+          sshpass -p "$VM_PASSWORD" scp -o StrictHostKeyChecking=no -r * $VM_USER@$VM_HOST:/tmp/
+          sshpass -p "$VM_PASSWORD" ssh -o StrictHostKeyChecking=no $VM_USER@$VM_HOST "echo $VM_PASSWORD | sudo -S mv /tmp/* /var/www/html/ && sudo systemctl restart nginx"
