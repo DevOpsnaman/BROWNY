@@ -18,13 +18,27 @@ jobs:
       - name: Install SSHpass
         run: sudo apt-get update && sudo apt-get install sshpass -y
 
-      # Step 3: Deploy the website files to Azure VM
+      # Step 3: Deploy the website files to a staging directory
       - name: Deploy to Azure VM
         env:
           VM_HOST: ${{ secrets.VM_HOST }}
           VM_USER: ${{ secrets.VM_USER }}
           VM_PASSWORD: ${{ secrets.VM_PASSWORD }}
         run: |
-          sshpass -p "$VM_PASSWORD" ssh -o StrictHostKeyChecking=no $VM_USER@$VM_HOST "echo $VM_PASSWORD | sudo -S rm -rf /var/www/html/*"
+          # Define variables
+          STAGING_DIR="/var/www/html_staging"
+          PRODUCTION_DIR="/var/www/html"
+          BACKUP_DIR="/var/www/html_backup"
+
+          # Step 1: Remove the old staging directory
+          sshpass -p "$VM_PASSWORD" ssh -o StrictHostKeyChecking=no $VM_USER@$VM_HOST "echo $VM_PASSWORD | sudo -S rm -rf $STAGING_DIR"
+
+          # Step 2: Copy new files to the staging directory
           sshpass -p "$VM_PASSWORD" scp -o StrictHostKeyChecking=no -r * $VM_USER@$VM_HOST:/tmp/
-          sshpass -p "$VM_PASSWORD" ssh -o StrictHostKeyChecking=no $VM_USER@$VM_HOST "echo $VM_PASSWORD | sudo -S mv /tmp/* /var/www/html/ && sudo systemctl restart nginx"
+          sshpass -p "$VM_PASSWORD" ssh -o StrictHostKeyChecking=no $VM_USER@$VM_HOST "echo $VM_PASSWORD | sudo -S mkdir -p $STAGING_DIR && sudo mv /tmp/* $STAGING_DIR"
+
+          # Step 3: Backup current production directory and replace it with staging directory
+          sshpass -p "$VM_PASSWORD" ssh -o StrictHostKeyChecking=no $VM_USER@$VM_HOST "echo $VM_PASSWORD | sudo -S mv $PRODUCTION_DIR $BACKUP_DIR && sudo mv $STAGING_DIR $PRODUCTION_DIR && sudo systemctl restart nginx"
+
+          # Optional Step: Cleanup backup directory after a successful deployment
+          sshpass -p "$VM_PASSWORD" ssh -o StrictHostKeyChecking=no $VM_USER@$VM_HOST "echo $VM_PASSWORD | sudo -S rm -rf $BACKUP_DIR"
