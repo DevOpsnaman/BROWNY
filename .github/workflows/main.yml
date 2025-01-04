@@ -1,0 +1,30 @@
+name: Deploy to Azure VM
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Checkout the repository code
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      # Step 2: Install SSHpass
+      - name: Install SSHpass
+        run: sudo apt-get update && sudo apt-get install sshpass -y
+
+      # Step 3: Deploy files to Azure VM
+      - name: Deploy Static Files
+        env:
+          VM_HOST: ${{ secrets.VM_HOST }}
+          VM_USER: ${{ secrets.VM_USER }}
+          VM_PASSWORD: ${{ secrets.VM_PASSWORD }}
+        run: |
+          sshpass -p "$VM_PASSWORD" ssh -o StrictHostKeyChecking=no $VM_USER@$VM_HOST "sudo rm -rf /var/www/html/*"
+          sshpass -p "$VM_PASSWORD" scp -o StrictHostKeyChecking=no -r ./ $VM_USER@$VM_HOST:/var/www/html/
+          sshpass -p "$VM_PASSWORD" ssh -o StrictHostKeyChecking=no $VM_USER@$VM_HOST "sudo systemctl restart nginx"
